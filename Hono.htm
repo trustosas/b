@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloudflare D1 Quick Client</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #f97316;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #334155;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: var(--muted); margin-bottom: 1.5rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #0f172a;
+      color: var(--text);
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    textarea {
+      font-family: monospace;
+      resize: vertical;
+      min-height: 80px;
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    button:hover { opacity: 0.9; }
+    pre {
+      background: #090d16;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      color: #38bdf8;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Cloudflare D1 Direct Explorer</h1>
+  <p class="subtitle">Query your D1 database directly using Cloudflare's REST API.</p>
+
+  <!-- Credentials -->
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label for="accountId">Account ID</label>
+        <input type="text" id="accountId" placeholder="e.g. 4d8f...">
+      </div>
+      <div>
+        <label for="databaseId">Database ID</label>
+        <input type="text" id="databaseId" placeholder="e.g. b2c3...">
+      </div>
+    </div>
+    <div style="margin-top: 1rem;">
+      <label for="apiToken">API Token (Needs D1 Read/Write Permissions)</label>
+      <input type="password" id="apiToken" placeholder="Cloudflare API Token">
+    </div>
+  </div>
+
+  <!-- Query Box -->
+  <div class="card">
+    <label for="sqlQuery">SQL Statement</label>
+    <textarea id="sqlQuery" placeholder="SELECT * FROM users LIMIT 10;"></textarea>
+    <button id="runBtn" onclick="runQuery()">Execute Query</button>
+  </div>
+
+  <!-- Output Box -->
+  <div class="card">
+    <label>Response</label>
+    <pre id="output">// Results will appear here...</pre>
+  </div>
+
+  <script>
+    async function runQuery() {
+      const accountId = document.getElementById('accountId').value.trim();
+      const databaseId = document.getElementById('databaseId').value.trim();
+      const apiToken = document.getElementById('apiToken').value.trim();
+      const sql = document.getElementById('sqlQuery').value.trim();
+      const output = document.getElementById('output');
+
+      if (!accountId || !databaseId || !apiToken || !sql) {
+        output.textContent = "Error: Please fill in all credentials and write a SQL query.";
+        return;
+      }
+
+      output.textContent = "Executing query...";
+
+      const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`;
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sql: sql
+          })
+        });
+
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = "Error: " + err.message + "\n\nNote: If you get a CORS error, Cloudflare API does not allow direct browser calls unless queried through a Worker or proxy.";
+      }
+    }
+  </script>
+
+</body>
+</html>
